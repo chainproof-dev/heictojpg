@@ -1,3 +1,4 @@
+use axum::extract::DefaultBodyLimit;
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::{
     routing::{get, post},
@@ -43,6 +44,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     // Build router
     Router::new()
+        .layer(DefaultBodyLimit::max(state.config.max_file_size))
         // API routes
         .route("/api/health", get(health))
         .route("/api/convert", post(convert_handler))
