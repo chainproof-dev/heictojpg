@@ -24,7 +24,7 @@ impl WorkerPool {
     pub fn new(config: &Config) -> Self {
         let (job_tx, mut job_rx) = mpsc::channel::<Job>(config.queue_size);
         let semaphore = Arc::new(Semaphore::new(config.worker_count));
-        
+
         // Create options to share with workers
         let options = Arc::new(ConvertOptions {
             max_resolution: config.max_resolution,
@@ -45,12 +45,12 @@ impl WorkerPool {
                 };
 
                 let opts = options.clone();
-                
+
                 // Spawn blocking task for CPU-bound work
                 tokio::spawn(async move {
                     // Permit is held by this task and dropped when it completes
                     let _permit = permit;
-                    
+
                     // Run conversion in blocking thread pool
                     let result = tokio::task::spawn_blocking(move || {
                         convert(&job.input, job.quality, &opts)
@@ -68,15 +68,19 @@ impl WorkerPool {
     }
 
     /// Submit a job for conversion
-    /// 
+    ///
     /// # Arguments
     /// * `input` - HEIC file bytes
     /// * `quality` - JPEG quality (60-95)
-    /// 
+    ///
     /// # Returns
     /// * `Ok(oneshot::Receiver)` - Receiver for the result
     /// * `Err(ConvertError::QueueFull)` - Queue is full
-    pub async fn submit(&self, input: Vec<u8>, quality: u8) -> Result<oneshot::Receiver<Result<Vec<u8>, ConvertError>>, ConvertError> {
+    pub async fn submit(
+        &self,
+        input: Vec<u8>,
+        quality: u8,
+    ) -> Result<oneshot::Receiver<Result<Vec<u8>, ConvertError>>, ConvertError> {
         let (response_tx, response_rx) = oneshot::channel();
 
         let job = Job {

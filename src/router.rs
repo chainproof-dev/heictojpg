@@ -1,23 +1,23 @@
-use std::sync::Arc;
-use std::time::Duration;
+use axum::http::{header, HeaderValue};
 use axum::{
     routing::{get, post},
     Router,
 };
+use std::sync::Arc;
+use std::time::Duration;
 use tower::ServiceBuilder;
 use tower_http::{
     compression::CompressionLayer,
     cors::{Any, CorsLayer},
+    request_id::MakeRequestUuid,
     services::ServeDir,
     set_header::SetResponseHeaderLayer,
     timeout::TimeoutLayer,
     trace::TraceLayer,
-    request_id::MakeRequestUuid,
     ServiceBuilderExt,
 };
-use axum::http::{header, HeaderValue};
 
-use crate::handlers::{health, convert_handler, batch_info};
+use crate::handlers::{batch_info, convert_handler, health};
 use crate::state::AppState;
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -26,7 +26,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
-    
+
     // Security Headers
     // - X-Content-Type-Options: nosniff
     // - X-Frame-Options: DENY
@@ -54,7 +54,9 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid)
                 .layer(TraceLayer::new_for_http())
-                .layer(TimeoutLayer::new(Duration::from_secs(state.config.request_timeout_secs)))
+                .layer(TimeoutLayer::new(Duration::from_secs(
+                    state.config.request_timeout_secs,
+                )))
                 .layer(CompressionLayer::new()) // GZIP/Brotli compression
                 .layer(cors)
                 .layer(security_headers),

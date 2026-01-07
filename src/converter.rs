@@ -1,17 +1,17 @@
 //! Core HEIC to JPEG conversion engine
 
 use crate::error::ConvertError;
-use libheif_rs::{HeifContext, RgbChroma, ColorSpace, LibHeif};
+use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use turbojpeg::{Compressor, Image, PixelFormat};
 
 /// Decode HEIC bytes to RGB image buffer
 fn decode_heic(data: &[u8], max_resolution: u32) -> Result<(Vec<u8>, u32, u32), ConvertError> {
     // Create LibHeif instance
     let lib_heif = LibHeif::new();
-    
+
     // Create HEIF context from bytes
-    let ctx = HeifContext::read_from_bytes(data)
-        .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
+    let ctx =
+        HeifContext::read_from_bytes(data).map_err(|e| ConvertError::DecodeError(e.to_string()))?;
 
     // Get primary image handle
     let handle = ctx
@@ -36,14 +36,15 @@ fn decode_heic(data: &[u8], max_resolution: u32) -> Result<(Vec<u8>, u32, u32), 
         .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
 
     let planes = image.planes();
-    
-    let interleaved = planes.interleaved
-        .ok_or_else(|| ConvertError::DecodeError("Failed to get interleaved RGB data".to_string()))?;
+
+    let interleaved = planes.interleaved.ok_or_else(|| {
+        ConvertError::DecodeError("Failed to get interleaved RGB data".to_string())
+    })?;
 
     // Copy pixel data
     let stride = interleaved.stride;
     let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
-    
+
     for y in 0..height as usize {
         let row_start = y * stride;
         let row_end = row_start + (width as usize * 3);
@@ -54,13 +55,19 @@ fn decode_heic(data: &[u8], max_resolution: u32) -> Result<(Vec<u8>, u32, u32), 
 }
 
 /// Encode RGB buffer to JPEG bytes
-fn encode_jpeg(rgb_data: &[u8], width: u32, height: u32, quality: u8, min_q: u8, max_q: u8) -> Result<Vec<u8>, ConvertError> {
+fn encode_jpeg(
+    rgb_data: &[u8],
+    width: u32,
+    height: u32,
+    quality: u8,
+    min_q: u8,
+    max_q: u8,
+) -> Result<Vec<u8>, ConvertError> {
     // Validate quality
     let quality = quality.clamp(min_q, max_q);
 
     // Create compressor
-    let mut compressor = Compressor::new()
-        .map_err(|e| ConvertError::EncodeError(e.to_string()))?;
+    let mut compressor = Compressor::new().map_err(|e| ConvertError::EncodeError(e.to_string()))?;
 
     compressor.set_quality(quality as i32);
     compressor.set_subsamp(turbojpeg::Subsamp::Sub2x2); // 4:2:0 chroma subsampling
@@ -90,12 +97,16 @@ pub struct ConvertOptions {
 }
 
 /// Convert HEIC bytes to JPEG bytes
-/// 
+///
 /// # Arguments
 /// * `heic_data` - Raw HEIC file bytes
 /// * `quality` - JPEG quality (60-95)
 /// * `options` - Conversion limits and options
-pub fn convert(heic_data: &[u8], quality: u8, options: &ConvertOptions) -> Result<Vec<u8>, ConvertError> {
+pub fn convert(
+    heic_data: &[u8],
+    quality: u8,
+    options: &ConvertOptions,
+) -> Result<Vec<u8>, ConvertError> {
     // Validate quality
     if quality < options.min_quality || quality > options.max_quality {
         return Err(ConvertError::InvalidQuality(quality));
@@ -105,7 +116,14 @@ pub fn convert(heic_data: &[u8], quality: u8, options: &ConvertOptions) -> Resul
     let (rgb_data, width, height) = decode_heic(heic_data, options.max_resolution)?;
 
     // Encode RGB to JPEG
-    let jpeg_data = encode_jpeg(&rgb_data, width, height, quality, options.min_quality, options.max_quality)?;
+    let jpeg_data = encode_jpeg(
+        &rgb_data,
+        width,
+        height,
+        quality,
+        options.min_quality,
+        options.max_quality,
+    )?;
 
     Ok(jpeg_data)
 }

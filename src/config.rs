@@ -1,7 +1,7 @@
 //! Configuration management
+use dotenvy::dotenv;
 use serde::Deserialize;
 use std::env;
-use dotenvy::dotenv;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -36,12 +36,12 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(50 * 1024 * 1024), // 50MB
-            
+
             max_resolution: env::var("MAX_RESOLUTION")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(16384),
-            
+
             default_quality: env::var("DEFAULT_QUALITY")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -56,7 +56,7 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(95),
-            
+
             worker_count: env::var("WORKER_COUNT")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -81,12 +81,11 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(30),
 
-            upload_dir: env::var("UPLOAD_DIR")
-                .unwrap_or_else(|_| "uploads".to_string()),
+            upload_dir: env::var("UPLOAD_DIR").unwrap_or_else(|_| "uploads".to_string()),
         }
     }
 }
 
-// Defaults for backward compatibility/testing if needed, 
+// Defaults for backward compatibility/testing if needed,
 // though direct usage should prefer the struct.
 pub const SUB2X2: bool = true; // Use 4:2:0 subsampling

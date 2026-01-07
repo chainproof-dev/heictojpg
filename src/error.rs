@@ -48,7 +48,10 @@ impl IntoResponse for ConvertError {
             ConvertError::InvalidQuality(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ConvertError::QueueFull => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
             ConvertError::Timeout => (StatusCode::GATEWAY_TIMEOUT, self.to_string()),
-            ConvertError::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error".to_string()),
+            ConvertError::Internal(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal error".to_string(),
+            ),
         };
 
         (status, Json(serde_json::json!({ "error": message }))).into_response()

@@ -8,10 +8,10 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use std::sync::Arc;
-use tracing::{info, instrument, error};
-use uuid::Uuid;
 use chrono::Utc;
+use std::sync::Arc;
+use tracing::{error, info, instrument};
+use uuid::Uuid;
 
 /// Health check endpoint
 pub async fn health() -> impl IntoResponse {
@@ -22,7 +22,7 @@ pub async fn health() -> impl IntoResponse {
 }
 
 /// Convert HEIC to JPG endpoint
-/// 
+///
 /// Accepts multipart form data with:
 /// - `file`: HEIC file (required)
 /// - `quality`: JPEG quality 60-95 (optional, default 85)
@@ -66,10 +66,10 @@ pub async fn convert_handler(
                     .text()
                     .await
                     .map_err(|e| ConvertError::ValidationError(e.to_string()))?;
-                
-                quality = q_str
-                    .parse::<u8>()
-                    .map_err(|_| ConvertError::ValidationError("Invalid quality value".to_string()))?;
+
+                quality = q_str.parse::<u8>().map_err(|_| {
+                    ConvertError::ValidationError("Invalid quality value".to_string())
+                })?;
 
                 // Validate quality range
                 if quality < state.config.min_quality || quality > state.config.max_quality {
@@ -83,9 +83,8 @@ pub async fn convert_handler(
     }
 
     // Ensure we have a file
-    let file_data = file_data.ok_or_else(|| {
-        ConvertError::ValidationError("Missing 'file' field".to_string())
-    })?;
+    let file_data = file_data
+        .ok_or_else(|| ConvertError::ValidationError("Missing 'file' field".to_string()))?;
 
     info!(
         file_name = ?file_name,
@@ -98,15 +97,18 @@ pub async fn convert_handler(
     // Format: YYYYMMDD-HHMMSS_UUID_original.heic
     let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
     let safe_id = Uuid::new_v4();
-    let safe_filename = format!("{}_{}_{}", 
-        timestamp, 
-        safe_id, 
-        file_name.clone().unwrap_or_else(|| "unknown.heic".to_string())
+    let safe_filename = format!(
+        "{}_{}_{}",
+        timestamp,
+        safe_id,
+        file_name
+            .clone()
+            .unwrap_or_else(|| "unknown.heic".to_string())
             .replace(|c: char| !c.is_alphanumeric() && c != '.', "_") // Sanitize original name
     );
-    
+
     let upload_path = std::path::Path::new(&state.config.upload_dir).join(&safe_filename);
-    
+
     if let Err(e) = tokio::fs::write(&upload_path, &file_data).await {
         error!(error = %e, path = ?upload_path, "Failed to save uploaded file for audit");
         // We choose NOT to fail the request if audit save fails, but you could if strict audit is required.
@@ -151,8 +153,8 @@ pub async fn batch_info(State(state): State<Arc<AppState>>) -> impl IntoResponse
         "description": "Convert HEIC to JPG",
         "fields": {
             "file": "HEIC file (required)",
-            "quality": format!("JPEG quality {}-{} (optional, default {})", 
-                state.config.min_quality, 
+            "quality": format!("JPEG quality {}-{} (optional, default {})",
+                state.config.min_quality,
                 state.config.max_quality,
                 state.config.default_quality)
         },

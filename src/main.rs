@@ -6,14 +6,14 @@ mod config;
 mod converter;
 mod error;
 mod handlers;
-mod worker;
-mod state;
 mod router;
+mod state;
+mod worker;
 
 use crate::config::Config;
+use crate::router::create_router;
 use crate::state::AppState;
 use crate::worker::WorkerPool;
-use crate::router::create_router;
 
 use std::sync::Arc;
 use tracing::info;
@@ -48,7 +48,7 @@ async fn main() {
     info!(workers = config.worker_count, "Worker pool initialized");
 
     // Create shared app state
-    let app_state = Arc::new(AppState { 
+    let app_state = Arc::new(AppState {
         worker_pool,
         config: config.clone(),
     });
