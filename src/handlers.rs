@@ -11,7 +11,7 @@ use axum::{
 use chrono::Utc;
 use std::sync::Arc;
 use tracing::{error, info, instrument};
-use uuid::Uuid;
+// use uuid::Uuid;
 
 /// Health check endpoint
 pub async fn health() -> impl IntoResponse {
@@ -94,27 +94,28 @@ pub async fn convert_handler(
     );
 
     // Securely save the file for audit
+    // TEMPORARY: Upload storage disabled
     // Format: YYYYMMDD-HHMMSS_UUID_original.heic
-    let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
-    let safe_id = Uuid::new_v4();
-    let safe_filename = format!(
-        "{}_{}_{}",
-        timestamp,
-        safe_id,
-        file_name
-            .clone()
-            .unwrap_or_else(|| "unknown.heic".to_string())
-            .replace(|c: char| !c.is_alphanumeric() && c != '.', "_") // Sanitize original name
-    );
+    // let timestamp = Utc::now().format("%Y%m%d-%H%M%S");
+    // let safe_id = Uuid::new_v4();
+    // let safe_filename = format!(
+    //     "{}_{}_{}",
+    //     timestamp,
+    //     safe_id,
+    //     file_name
+    //         .clone()
+    //         .unwrap_or_else(|| "unknown.heic".to_string())
+    //         .replace(|c: char| !c.is_alphanumeric() && c != '.', "_") // Sanitize original name
+    // );
 
-    let upload_path = std::path::Path::new(&state.config.upload_dir).join(&safe_filename);
+    // let upload_path = std::path::Path::new(&state.config.upload_dir).join(&safe_filename);
 
-    if let Err(e) = tokio::fs::write(&upload_path, &file_data).await {
-        error!(error = %e, path = ?upload_path, "Failed to save uploaded file for audit");
-        // We choose NOT to fail the request if audit save fails, but you could if strict audit is required.
-    } else {
-        info!(path = ?upload_path, "File saved for audit");
-    }
+    // if let Err(e) = tokio::fs::write(&upload_path, &file_data).await {
+    //     error!(error = %e, path = ?upload_path, "Failed to save uploaded file for audit");
+    //     // We choose NOT to fail the request if audit save fails, but you could if strict audit is required.
+    // } else {
+    //     info!(path = ?upload_path, "File saved for audit");
+    // }
 
     // Submit to worker pool
     let result_rx = state.worker_pool.submit(file_data, quality).await?;

@@ -37,11 +37,12 @@ async fn main() {
     info!("Configuration loaded: {:?}", config);
 
     // Create upload directory
-    if let Err(e) = tokio::fs::create_dir_all(&config.upload_dir).await {
-        eprintln!("Failed to create upload directory: {}", e);
-        std::process::exit(1);
-    }
-    info!(dir = config.upload_dir, "Upload directory verified");
+    // TEMPORARY: Upload storage disabled
+    // if let Err(e) = tokio::fs::create_dir_all(&config.upload_dir).await {
+    //     eprintln!("Failed to create upload directory: {}", e);
+    //     std::process::exit(1);
+    // }
+    // info!(dir = config.upload_dir, "Upload directory verified");
 
     // Create worker pool
     let worker_pool = WorkerPool::new(&config);
