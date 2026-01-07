@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,79 +13,68 @@ jobs:
   test:
     name: Test & Lint
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Install system dependencies (libheif + build tools)
         run: |
           sudo apt-get update
-
-          # Install libheif dev files and common HEIF/codec dependencies so libheif-sys can find them
           sudo apt-get install -y --no-install-recommends \
             libheif-dev \
             libde265-dev \
             libx265-dev \
             libaom-dev \
-            libjpeg-turbo8-dev \
             libjpeg-dev \
+            libjpeg-turbo8-dev \
             pkg-config \
-            pkgconf \
             cmake \
             build-essential \
-            llvm \
             clang \
+            llvm \
             nasm
 
-          # Export PKG_CONFIG_PATH for the remainder of the job to ensure pkg-config can find libheif.pc
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
 
-      - name: Diagnostic: verify pkg-config can find libheif
+      - name: Verify libheif via pkg-config
         run: |
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-          pkg-config --version || true
-          # show whether libheif is available to pkg-config
-          if pkg-config --exists libheif; then
-            echo "libheif found:"
-            pkg-config --modversion libheif || true
-            pkg-config --cflags --libs libheif || true
-            pkg-config --variable=pcfiledir libheif || true
-          else
-            echo "::error::pkg-config could not find libheif. Listing pkgconfig dirs for debugging:"
-            ls -la /usr/lib/x86_64-linux-gnu/pkgconfig || true
-            ls -la /usr/lib/pkgconfig || true
-            ls -la /usr/share/pkgconfig || true
-            # fail early so CI clearly indicates missing system dependency
-            exit 1
-          fi
+          pkg-config --version
+          pkg-config --exists libheif
+          pkg-config --modversion libheif
+          pkg-config --cflags --libs libheif
 
-      - name: Install Rust (from rust-toolchain file)
+      - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
+          components: rustfmt, clippy
 
-      - name: Rust Cache
+      - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Clippy
-        run: cargo clippy -- -D warnings
+      - name: Run clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --all --verbose
 
   docker:
     name: Build Docker Image
     needs: test
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker Image
+      - name: Build Docker image (no push)
         uses: docker/build-push-action@v6
         with:
           context: .
