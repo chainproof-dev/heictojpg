@@ -1,5 +1,5 @@
 # Using cargo-chef for faster builds
-FROM rust:1.83-bookworm AS chef
+FROM rust:bookworm AS chef
 RUN cargo install cargo-chef
 WORKDIR /app
 
