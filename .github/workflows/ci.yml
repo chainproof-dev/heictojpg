@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  PKG_CONFIG_PATH: "/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig"
 
 jobs:
   test:
@@ -30,8 +31,7 @@ jobs:
             pkg-config \
             build-essential
 
-          # make sure pkg-config can find .pc files in standard locations (harmless if already set)
-          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH"
+          # show PKG_CONFIG_PATH for diagnostics (set globally via env above)
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
 
           # quick diagnostics (helpful if CI still fails)
