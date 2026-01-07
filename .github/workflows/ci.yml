@@ -1,34 +1,76 @@
-  - name: Install system dependencies
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y \
-        pkg-config \
-        cmake \
-        nasm \
-        build-essential \
-        libheif-dev \
-        libjpeg-turbo8-dev \
-        libde265-dev
+name: CI
 
-  - name: Setup Rust
-    uses: actions/setup-rust@v1
-    with:
-      toolchain: stable
-      override: true
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
-  - name: Cache cargo registry and target
-    uses: actions/cache@v4
-    with:
-      path: |
-        ~/.cargo/registry
-        ~/.cargo/git
-        target
-      key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      restore-keys: |
-        ${{ runner.os }}-cargo-
+env:
+  CARGO_TERM_COLOR: always
 
-  - name: Build
-    run: cargo build --verbose
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-  - name: Run tests
-    run: cargo test --verbose
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          # required: libheif, libjpeg-turbo dev headers, plus tools needed by native builds
+          sudo apt-get install -y \
+            libheif-dev \
+            libjpeg-turbo8-dev \
+            llvm \
+            clang \
+            nasm \
+            cmake \
+            pkg-config \
+            build-essential
+
+          # make sure pkg-config can find .pc files in standard locations (harmless if already set)
+          export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig:$PKG_CONFIG_PATH"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+
+          # quick diagnostics (helpful if CI still fails)
+          pkg-config --version || true
+          nasm -v || true
+          cmake --version || true
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
+
+  docker:
+    name: Build Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: heictojpg:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
