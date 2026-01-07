@@ -69,8 +69,8 @@ fn encode_jpeg(
     // Create compressor
     let mut compressor = Compressor::new().map_err(|e| ConvertError::EncodeError(e.to_string()))?;
 
-    compressor.set_quality(quality as i32);
-    compressor.set_subsamp(turbojpeg::Subsamp::Sub2x2); // 4:2:0 chroma subsampling
+    compressor.set_quality(quality as i32).map_err(|e| ConvertError::EncodeError(e.to_string()))?;
+    compressor.set_subsamp(turbojpeg::Subsamp::Sub2x2).map_err(|e| ConvertError::EncodeError(e.to_string()))?; // 4:2:0 chroma subsampling
 
     // Create image wrapper
     let image = Image {

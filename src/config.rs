@@ -88,4 +88,4 @@ impl Config {
 
 // Defaults for backward compatibility/testing if needed,
 // though direct usage should prefer the struct.
-pub const SUB2X2: bool = true; // Use 4:2:0 subsampling
+

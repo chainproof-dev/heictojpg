@@ -16,7 +16,6 @@ pub struct Job {
 /// Worker pool for handling conversion jobs
 pub struct WorkerPool {
     job_tx: mpsc::Sender<Job>,
-    semaphore: Arc<Semaphore>,
 }
 
 impl WorkerPool {
@@ -64,7 +63,7 @@ impl WorkerPool {
             }
         });
 
-        Self { job_tx, semaphore }
+        Self { job_tx }
     }
 
     /// Submit a job for conversion
@@ -96,8 +95,5 @@ impl WorkerPool {
         Ok(response_rx)
     }
 
-    /// Get current queue capacity
-    pub fn available_permits(&self) -> usize {
-        self.semaphore.available_permits()
-    }
+
 }

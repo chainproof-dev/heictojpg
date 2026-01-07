@@ -1,4 +1,4 @@
-use axum::http::{header, HeaderValue};
+use axum::http::{header, HeaderValue, StatusCode};
 use axum::{
     routing::{get, post},
     Router,
@@ -54,9 +54,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             ServiceBuilder::new()
                 .set_x_request_id(MakeRequestUuid)
                 .layer(TraceLayer::new_for_http())
-                .layer(TimeoutLayer::new(Duration::from_secs(
-                    state.config.request_timeout_secs,
-                )))
+                .layer(TimeoutLayer::with_status_code(
+                    StatusCode::REQUEST_TIMEOUT,
+                    Duration::from_secs(state.config.request_timeout_secs),
+                ))
                 .layer(CompressionLayer::new()) // GZIP/Brotli compression
                 .layer(cors)
                 .layer(security_headers),
