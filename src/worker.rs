@@ -94,6 +94,4 @@ impl WorkerPool {
 
         Ok(response_rx)
     }
-
-
 }
