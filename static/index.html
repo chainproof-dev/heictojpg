@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Super-fast HEIC to JPG converter. Convert Apple HEIC photos to JPG instantly, free and private.">
+    <title>HEIC to JPG Converter | Fast & Private</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app">
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">⚡</span>
+                <h1>HEIC<span class="accent">to</span>JPG</h1>
+            </div>
+            <p class="tagline">Lightning-fast conversion, 100% private</p>
+        </header>
+
+        <main class="main">
+            <!-- Drop Zone -->
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <div class="drop-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <p class="drop-text">Drag & drop HEIC files here</p>
+                    <p class="drop-subtext">or click to browse</p>
+                    <input type="file" id="fileInput" accept=".heic,.HEIC" multiple hidden>
+                </div>
+                <div class="drop-zone-active">
+                    <span>Drop files to convert</span>
+                </div>
+            </div>
+
+            <!-- Quality Selection -->
+            <div class="quality-section">
+                <div class="quality-header">
+                    <label>Output Quality</label>
+                    <span class="quality-value" id="qualityValue">Recommended (80%)</span>
+                </div>
+                <div class="quality-presets">
+                    <label class="preset-option">
+                        <input type="radio" name="quality" value="95">
+                        <span class="preset-card">
+                            <span class="preset-name">Best</span>
+                            <span class="preset-desc">Max details</span>
+                        </span>
+                    </label>
+                    <label class="preset-option">
+                        <input type="radio" name="quality" value="80" checked>
+                        <span class="preset-card">
+                            <span class="preset-name">Balanced</span>
+                            <span class="preset-desc">Recommended</span>
+                        </span>
+                    </label>
+                    <label class="preset-option">
+                        <input type="radio" name="quality" value="60">
+                        <span class="preset-card">
+                            <span class="preset-name">Small</span>
+                            <span class="preset-desc">Save space</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- File List -->
+            <div class="file-list-actions" id="fileListActions" style="display: none;">
+                <h3 class="section-title">Selected Files</h3>
+                <button type="button" class="clear-all-btn" id="clearAllBtn">Clear All</button>
+            </div>
+            <div class="file-list" id="fileList">
+                <!-- Files will be added here dynamically -->
+            </div>
+
+            <!-- Convert Button -->
+            <button class="convert-btn" id="convertBtn" disabled>
+                <span class="btn-text">Convert All</span>
+                <span class="btn-loader"></span>
+            </button>
+
+            <!-- Results -->
+            <div class="results" id="results">
+                <!-- Results will be added here dynamically -->
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>🔒 All conversions happen on the server. Files are never stored.</p>
+            <p class="tech-badge">Powered by Rust • libheif • turbojpeg</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

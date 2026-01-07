@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SERVER_PORT=3000
+      - WORKER_COUNT=4
+      - MAX_FILE_SIZE=52428800 # 50MB
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
