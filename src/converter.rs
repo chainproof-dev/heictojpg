@@ -1,60 +1,84 @@
 //! Core HEIC to JPEG conversion engine
+//!
+//! Optimized with thread-local caching for maximum performance.
 
 use crate::error::ConvertError;
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
+use std::cell::RefCell;
 use turbojpeg::{Compressor, Image, PixelFormat};
+
+// Thread-local LibHeif instance - avoid initialization overhead per request
+thread_local! {
+    static LIB_HEIF: LibHeif = LibHeif::new();
+    static COMPRESSOR: RefCell<Option<Compressor>> = RefCell::new(None);
+}
+
+/// Get or create thread-local compressor
+fn with_compressor<F, R>(f: F) -> Result<R, ConvertError>
+where
+    F: FnOnce(&mut Compressor) -> Result<R, ConvertError>,
+{
+    COMPRESSOR.with(|cell| {
+        let mut opt = cell.borrow_mut();
+        if opt.is_none() {
+            *opt = Some(Compressor::new().map_err(|e| ConvertError::EncodeError(e.to_string()))?);
+        }
+        f(opt.as_mut().unwrap())
+    })
+}
 
 /// Decode HEIC bytes to RGB image buffer
 fn decode_heic(data: &[u8], max_resolution: u32) -> Result<(Vec<u8>, u32, u32), ConvertError> {
-    // Create LibHeif instance
-    let lib_heif = LibHeif::new();
+    // Use thread-local LibHeif instance
+    LIB_HEIF.with(|lib_heif| {
+        // Create HEIF context from bytes
+        let ctx = HeifContext::read_from_bytes(data)
+            .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
 
-    // Create HEIF context from bytes
-    let ctx =
-        HeifContext::read_from_bytes(data).map_err(|e| ConvertError::DecodeError(e.to_string()))?;
+        // Get primary image handle
+        let handle = ctx
+            .primary_image_handle()
+            .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
 
-    // Get primary image handle
-    let handle = ctx
-        .primary_image_handle()
-        .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
+        let width = handle.width();
+        let height = handle.height();
 
-    let width = handle.width();
-    let height = handle.height();
+        // Check resolution limits
+        if width > max_resolution || height > max_resolution {
+            return Err(ConvertError::ImageTooLarge {
+                width,
+                height,
+                max: max_resolution,
+            });
+        }
 
-    // Check resolution limits
-    if width > max_resolution || height > max_resolution {
-        return Err(ConvertError::ImageTooLarge {
-            width,
-            height,
-            max: max_resolution,
-        });
-    }
+        // Decode to RGB using thread-local LibHeif instance
+        let image = lib_heif
+            .decode(&handle, ColorSpace::Rgb(RgbChroma::Rgb), None)
+            .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
 
-    // Decode to RGB using LibHeif instance
-    let image = lib_heif
-        .decode(&handle, ColorSpace::Rgb(RgbChroma::Rgb), None)
-        .map_err(|e| ConvertError::DecodeError(e.to_string()))?;
+        let planes = image.planes();
 
-    let planes = image.planes();
+        let interleaved = planes.interleaved.ok_or_else(|| {
+            ConvertError::DecodeError("Failed to get interleaved RGB data".to_string())
+        })?;
 
-    let interleaved = planes.interleaved.ok_or_else(|| {
-        ConvertError::DecodeError("Failed to get interleaved RGB data".to_string())
-    })?;
+        // Copy pixel data with pre-sized capacity
+        let stride = interleaved.stride;
+        let capacity = (width as usize) * (height as usize) * 3;
+        let mut rgb_data = Vec::with_capacity(capacity);
 
-    // Copy pixel data
-    let stride = interleaved.stride;
-    let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
+        for y in 0..height as usize {
+            let row_start = y * stride;
+            let row_end = row_start + (width as usize * 3);
+            rgb_data.extend_from_slice(&interleaved.data[row_start..row_end]);
+        }
 
-    for y in 0..height as usize {
-        let row_start = y * stride;
-        let row_end = row_start + (width as usize * 3);
-        rgb_data.extend_from_slice(&interleaved.data[row_start..row_end]);
-    }
-
-    Ok((rgb_data, width, height))
+        Ok((rgb_data, width, height))
+    })
 }
 
-/// Encode RGB buffer to JPEG bytes
+/// Encode RGB buffer to JPEG bytes using thread-local compressor
 fn encode_jpeg(
     rgb_data: &[u8],
     width: u32,
@@ -63,34 +87,33 @@ fn encode_jpeg(
     min_q: u8,
     max_q: u8,
 ) -> Result<Vec<u8>, ConvertError> {
-    // Validate quality
+    // Validate and clamp quality
     let quality = quality.clamp(min_q, max_q);
 
-    // Create compressor
-    let mut compressor = Compressor::new().map_err(|e| ConvertError::EncodeError(e.to_string()))?;
+    with_compressor(|compressor| {
+        compressor
+            .set_quality(quality as i32)
+            .map_err(|e| ConvertError::EncodeError(e.to_string()))?;
+        compressor
+            .set_subsamp(turbojpeg::Subsamp::Sub2x2)
+            .map_err(|e| ConvertError::EncodeError(e.to_string()))?; // 4:2:0 chroma subsampling
 
-    compressor
-        .set_quality(quality as i32)
-        .map_err(|e| ConvertError::EncodeError(e.to_string()))?;
-    compressor
-        .set_subsamp(turbojpeg::Subsamp::Sub2x2)
-        .map_err(|e| ConvertError::EncodeError(e.to_string()))?; // 4:2:0 chroma subsampling
+        // Create image wrapper
+        let image = Image {
+            pixels: rgb_data,
+            width: width as usize,
+            pitch: width as usize * 3,
+            height: height as usize,
+            format: PixelFormat::RGB,
+        };
 
-    // Create image wrapper
-    let image = Image {
-        pixels: rgb_data,
-        width: width as usize,
-        pitch: width as usize * 3,
-        height: height as usize,
-        format: PixelFormat::RGB,
-    };
+        // Compress
+        let jpeg_data = compressor
+            .compress_to_vec(image)
+            .map_err(|e| ConvertError::EncodeError(e.to_string()))?;
 
-    // Compress
-    let jpeg_data = compressor
-        .compress_to_vec(image)
-        .map_err(|e| ConvertError::EncodeError(e.to_string()))?;
-
-    Ok(jpeg_data)
+        Ok(jpeg_data)
+    })
 }
 
 /// Conversion options
