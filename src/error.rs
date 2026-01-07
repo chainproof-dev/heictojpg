@@ -44,9 +44,7 @@ impl IntoResponse for ConvertError {
             ConvertError::DecodeError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ConvertError::EncodeError(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
             ConvertError::ValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            ConvertError::FileTooLarge { .. } => {
-                (StatusCode::PAYLOAD_TOO_LARGE, self.to_string())
-            }
+            ConvertError::FileTooLarge { .. } => (StatusCode::PAYLOAD_TOO_LARGE, self.to_string()),
             ConvertError::ImageTooLarge { .. } => (StatusCode::BAD_REQUEST, self.to_string()),
             ConvertError::InvalidQuality(_) => (StatusCode::BAD_REQUEST, self.to_string()),
             ConvertError::QueueFull => (StatusCode::SERVICE_UNAVAILABLE, self.to_string()),
@@ -57,10 +55,6 @@ impl IntoResponse for ConvertError {
             ),
         };
 
-        (
-            status,
-            Json(serde_json::json!({ "error": message })),
-        )
-            .into_response()
+        (status, Json(serde_json::json!({ "error": message }))).into_response()
     }
 }
