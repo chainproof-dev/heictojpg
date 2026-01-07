@@ -37,3 +37,22 @@ jobs:
 
       - name: Run tests
         run: cargo test
+
+  docker:
+    name: Build Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: heictojpg:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
