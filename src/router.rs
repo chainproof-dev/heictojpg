@@ -44,7 +44,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     // Build router
     Router::new()
-        .layer(DefaultBodyLimit::max(state.config.max_file_size))
         // API routes
         .route("/api/health", get(health))
         .route("/api/convert", post(convert_handler))
@@ -54,6 +53,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         // Middleware
         .layer(
             ServiceBuilder::new()
+                .layer(DefaultBodyLimit::max(state.config.max_file_size))
                 .set_x_request_id(MakeRequestUuid)
                 .layer(TraceLayer::new_for_http())
                 .layer(TimeoutLayer::with_status_code(
