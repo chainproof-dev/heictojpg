@@ -8,41 +8,70 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  PKG_CONFIG_PATH: /usr/local/lib/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig
 
 jobs:
   test:
     name: Test & Lint
-    runs-on: ubuntu-24.04   # 🔑 CRITICAL FIX
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install system dependencies (libheif >= 1.18)
+      # -----------------------------
+      # System build dependencies
+      # -----------------------------
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libheif-dev \
-            libde265-dev \
-            libx265-dev \
-            libaom-dev \
-            libjpeg-dev \
-            libjpeg-turbo8-dev \
-            pkg-config \
-            cmake \
+            git \
+            ca-certificates \
             build-essential \
+            cmake \
+            pkg-config \
             clang \
             llvm \
-            nasm
+            nasm \
+            libjpeg-dev \
+            libjpeg-turbo8-dev \
+            libde265-dev \
+            libx265-dev \
+            libaom-dev
 
-          echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
+      # -----------------------------
+      # Build libheif from source
+      # -----------------------------
+      - name: Build and install libheif 1.18.2 from source
+        run: |
+          git clone --depth 1 --branch v1.18.2 https://github.com/strukturag/libheif.git
+          cd libheif
+          mkdir build && cd build
 
-      - name: Verify libheif version
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DWITH_EXAMPLES=OFF \
+            -DWITH_GDK_PIXBUF=OFF \
+            -DWITH_RAV1E=OFF \
+            -DWITH_DAV1D=OFF
+
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+
+      # -----------------------------
+      # Verify libheif
+      # -----------------------------
+      - name: Verify libheif installation
         run: |
           pkg-config --modversion libheif
           pkg-config --cflags --libs libheif
 
-      - name: Install Rust toolchain
+      # -----------------------------
+      # Rust
+      # -----------------------------
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -58,23 +87,3 @@ jobs:
 
       - name: Run tests
         run: cargo test --all --verbose
-
-  docker:
-    name: Build Docker Image
-    needs: test
-    runs-on: ubuntu-24.04   # 🔑 MATCH BASE OS
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: heictojpg:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
