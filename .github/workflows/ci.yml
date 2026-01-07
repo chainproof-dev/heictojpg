@@ -12,13 +12,13 @@ env:
 jobs:
   test:
     name: Test & Lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # 🔑 CRITICAL FIX
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install system dependencies (libheif + build tools)
+      - name: Install system dependencies (libheif >= 1.18)
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -37,11 +37,8 @@ jobs:
 
           echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig" >> $GITHUB_ENV
 
-      - name: Verify libheif via pkg-config
+      - name: Verify libheif version
         run: |
-          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-          pkg-config --version
-          pkg-config --exists libheif
           pkg-config --modversion libheif
           pkg-config --cflags --libs libheif
 
@@ -50,13 +47,13 @@ jobs:
         with:
           components: rustfmt, clippy
 
-      - name: Cache Rust build
+      - name: Cache Rust
         uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run clippy
+      - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run tests
@@ -65,16 +62,15 @@ jobs:
   docker:
     name: Build Docker Image
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # 🔑 MATCH BASE OS
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (no push)
+      - name: Build Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
