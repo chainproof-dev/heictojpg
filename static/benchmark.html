@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEIC to JPG Benchmark</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1, h2, h3 { margin: 0; }
+
+        .header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .progress-container {
+            margin: 2rem 0;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 0.5rem;
+            background-color: var(--border);
+            border-radius: 1rem;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: var(--success);
+            width: 0%;
+            transition: width 0.2s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th { color: var(--text-muted); font-weight: 500; }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Benchmark Suite</h1>
+                <p style="color: var(--text-muted)">High-performance HEIC conversion testing</p>
+            </div>
+            <div>
+                <span id="fileCountBadge" style="background: var(--surface); padding: 0.5rem 1rem; border-radius: 2rem; border: 1px solid var(--border);">Loading...</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                <label>Parallel Requests:</label>
+                <select id="concurrency" style="padding: 0.5rem; border-radius: 0.25rem; background: var(--bg); color: var(--text); border: 1px solid var(--border);">
+                    <option value="1">1 (Sequential)</option>
+                    <option value="2">2</option>
+                    <option value="4" selected>4</option>
+                    <option value="8">8</option>
+                    <option value="16">16</option>
+                </select>
+                <button onclick="startBenchmark()" id="startBtn">Start Benchmark</button>
+            </div>
+
+            <div class="progress-container" id="progressContainer">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span>Progress</span>
+                    <span id="progressText">0/0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsArea" style="display: none;">
+            <div class="grid-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalTime">0s</div>
+                    <div class="stat-label">Total Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="throughputFiles">0</div>
+                    <div class="stat-label">Images / Sec</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="throughputData">0 MB/s</div>
+                    <div class="stat-label">Data Throughput</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgLatency">0ms</div>
+                    <div class="stat-label">Avg Latency</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Latency Distribution (ms)</h3>
+                <div class="chart-container">
+                    <canvas id="latencyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Detailed Results</h3>
+                <div style="overflow-x: auto;">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>File Name</th>
+                                <th>Size (KB)</th>
+                                <th>Latency (ms)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let manifest = null;
+        let chartInstance = null;
+
+        async function loadManifest() {
+            try {
+                const res = await fetch('/benchmark/manifest.json');
+                manifest = await res.json();
+                document.getElementById('fileCountBadge').textContent = `${manifest.total_files} Benchmark Images Ready`;
+                
+                // Pre-load images
+                console.log('Pre-loading images to memory...');
+                for (let file of manifest.files) {
+                    const imgRes = await fetch(`/${file.path}`);
+                    file.blob = await imgRes.blob();
+                }
+                document.getElementById('fileCountBadge').textContent = `${manifest.total_files} Images Loaded (Ready)`;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('fileCountBadge').textContent = 'Error loading benchmark data';
+            }
+        }
+
+        async function convertFile(file) {
+            const formData = new FormData();
+            formData.append('file', file.blob, file.name);
+
+            const start = performance.now();
+            const res = await fetch('/api/convert', {
+                method: 'POST',
+                body: formData
+            });
+            const end = performance.now();
+            
+            if (!res.ok) throw new Error(res.statusText);
+            await res.blob(); // Consume body
+            
+            return end - start;
+        }
+
+        async function startBenchmark() {
+            if (!manifest) return;
+            
+            const btn = document.getElementById('startBtn');
+            const concurrency = parseInt(document.getElementById('concurrency').value);
+            btn.disabled = true;
+            
+            document.getElementById('resultsArea').style.display = 'block';
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            const tbody = document.querySelector('#resultsTable tbody');
+            tbody.innerHTML = '';
+            
+            let completed = 0;
+            let total = manifest.files.length;
+            let results = [];
+            let totalSize = 0;
+            
+            const startTime = performance.now();
+
+            // Processing queue
+            const queue = [...manifest.files];
+            const workers = [];
+
+            for (let i = 0; i < concurrency; i++) {
+                workers.push((async () => {
+                    while (queue.length > 0) {
+                        const file = queue.shift();
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td>${manifest.files.indexOf(file) + 1}</td>
+                            <td>${file.name}</td>
+                            <td>${(file.size / 1024).toFixed(1)}</td>
+                            <td>...</td>
+                            <td>Running</td>
+                        `;
+
+                        try {
+                            const latency = await convertFile(file);
+                            
+                            row.cells[3].textContent = latency.toFixed(0);
+                            row.cells[4].textContent = '✅ Success';
+                            row.cells[4].style.color = 'var(--success)';
+                            
+                            results.push({ latency, file });
+                            totalSize += file.size;
+                        } catch (e) {
+                            row.cells[3].textContent = '-';
+                            row.cells[4].textContent = '❌ Failed';
+                            row.cells[4].style.color = 'var(--error)';
+                            console.error(e);
+                        }
+
+                        completed++;
+                        updateProgress(completed, total);
+                    }
+                })());
+            }
+
+            await Promise.all(workers);
+            
+            const endTime = performance.now();
+            const duration = (endTime - startTime) / 1000; // seconds
+
+            updateStats(results, duration, totalSize);
+            updateChart(results);
+            
+            btn.disabled = false;
+        }
+
+        function updateProgress(current, total) {
+            const pct = (current / total) * 100;
+            document.getElementById('progressFill').style.width = `${pct}%`;
+            document.getElementById('progressText').textContent = `${current}/${total}`;
+        }
+
+        function updateStats(results, duration, totalSizeBytes) {
+            document.getElementById('totalTime').textContent = duration.toFixed(2) + 's';
+            
+            const fps = results.length / duration;
+            document.getElementById('throughputFiles').textContent = fps.toFixed(1);
+            
+            const mbps = (totalSizeBytes / 1024 / 1024) / duration;
+            document.getElementById('throughputData').textContent = mbps.toFixed(1) + ' MB/s';
+            
+            const avg = results.reduce((a, b) => a + b.latency, 0) / results.length;
+            document.getElementById('avgLatency').textContent = avg.toFixed(0) + 'ms';
+        }
+
+        function updateChart(results) {
+            const ctx = document.getElementById('latencyChart').getContext('2d');
+            
+            if (chartInstance) chartInstance.destroy();
+            
+            const labels = results.map((_, i) => `#${i + 1}`);
+            const data = results.map(r => r.latency);
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Latency (ms)',
+                        data: data,
+                        backgroundColor: '#6366f1',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#334155' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        loadManifest();
+    </script>
+</body>
+</html>

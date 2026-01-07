@@ -1,0 +1,111 @@
+{
+  "total_files": 21,
+  "total_size": 41784093.0,
+  "files": [
+    {
+      "size": 1443850,
+      "name": "sample_1.heic",
+      "path": "benchmark/sample_1.heic"
+    },
+    {
+      "size": 5276228,
+      "name": "sample_2.heic",
+      "path": "benchmark/sample_2.heic"
+    },
+    {
+      "size": 1442278,
+      "name": "sample_3.heic",
+      "path": "benchmark/sample_3.heic"
+    },
+    {
+      "size": 1595244,
+      "name": "sample_4.heic",
+      "path": "benchmark/sample_4.heic"
+    },
+    {
+      "size": 1618040,
+      "name": "sample_5.heic",
+      "path": "benchmark/sample_5.heic"
+    },
+    {
+      "size": 1332170,
+      "name": "sample_6.heic",
+      "path": "benchmark/sample_6.heic"
+    },
+    {
+      "size": 1220221,
+      "name": "sample_7.heic",
+      "path": "benchmark/sample_7.heic"
+    },
+    {
+      "size": 1443850,
+      "name": "sample_copy_8.heic",
+      "path": "benchmark/sample_copy_8.heic"
+    },
+    {
+      "size": 5276228,
+      "name": "sample_copy_9.heic",
+      "path": "benchmark/sample_copy_9.heic"
+    },
+    {
+      "size": 1442278,
+      "name": "sample_copy_10.heic",
+      "path": "benchmark/sample_copy_10.heic"
+    },
+    {
+      "size": 1595244,
+      "name": "sample_copy_11.heic",
+      "path": "benchmark/sample_copy_11.heic"
+    },
+    {
+      "size": 1618040,
+      "name": "sample_copy_12.heic",
+      "path": "benchmark/sample_copy_12.heic"
+    },
+    {
+      "size": 1332170,
+      "name": "sample_copy_13.heic",
+      "path": "benchmark/sample_copy_13.heic"
+    },
+    {
+      "size": 1220221,
+      "name": "sample_copy_14.heic",
+      "path": "benchmark/sample_copy_14.heic"
+    },
+    {
+      "size": 1443850,
+      "name": "sample_copy_15.heic",
+      "path": "benchmark/sample_copy_15.heic"
+    },
+    {
+      "size": 5276228,
+      "name": "sample_copy_16.heic",
+      "path": "benchmark/sample_copy_16.heic"
+    },
+    {
+      "size": 1442278,
+      "name": "sample_copy_17.heic",
+      "path": "benchmark/sample_copy_17.heic"
+    },
+    {
+      "size": 1595244,
+      "name": "sample_copy_18.heic",
+      "path": "benchmark/sample_copy_18.heic"
+    },
+    {
+      "size": 1618040,
+      "name": "sample_copy_19.heic",
+      "path": "benchmark/sample_copy_19.heic"
+    },
+    {
+      "size": 1332170,
+      "name": "sample_copy_20.heic",
+      "path": "benchmark/sample_copy_20.heic"
+    },
+    {
+      "size": 1220221,
+      "name": "sample_copy_21.heic",
+      "path": "benchmark/sample_copy_21.heic"
+    }
+  ]
+}
