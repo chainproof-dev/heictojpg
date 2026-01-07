@@ -1,4 +1,7 @@
 //! Configuration management
+//!
+//! Includes smart CPU detection for optimal resource utilization.
+
 use dotenvy::dotenv;
 use serde::Deserialize;
 use std::env;
@@ -27,9 +30,56 @@ pub struct Config {
     pub upload_dir: String,
 }
 
+/// Smart CPU detection for optimal worker configuration
+///
+/// Strategy:
+/// - Detects available parallelism (logical cores)
+/// - For CPU-bound image processing, using all logical cores is beneficial
+/// - Reserves 1 core for I/O tasks if we have more than 4 cores
+/// - Ensures minimum of 2 workers and maximum based on available parallelism
+fn detect_optimal_workers() -> usize {
+    let logical_cores = std::thread::available_parallelism()
+        .map(|p| p.get())
+        .unwrap_or(4);
+
+    // Strategy for CPU-bound image conversion:
+    // - Use most cores for conversion work
+    // - Reserve 1 for async I/O if we have plenty (>4)
+    // - Minimum 2 workers, maximum = logical cores
+    let workers = if logical_cores > 4 {
+        logical_cores - 1 // Reserve one for I/O
+    } else {
+        logical_cores // Use all cores on smaller systems
+    };
+
+    workers.max(2) // Ensure at least 2 workers
+}
+
+/// Calculate optimal queue size based on worker count
+///
+/// Strategy:
+/// - Queue should be large enough to absorb burst traffic
+/// - But not so large that we waste memory on pending requests
+/// - Formula: workers * 4 for burst absorption, minimum 100
+fn calculate_optimal_queue_size(worker_count: usize) -> usize {
+    let base_queue = worker_count * 4;
+    base_queue.max(100) // Minimum 100 for small worker counts
+}
+
 impl Config {
     pub fn from_env() -> Self {
         dotenv().ok(); // Load .env if present
+
+        // Detect optimal workers first (used for queue calculation if not overridden)
+        let optimal_workers = detect_optimal_workers();
+
+        let worker_count = env::var("WORKER_COUNT")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(optimal_workers);
+
+        // Queue size based on worker count for optimal throughput
+        let default_queue = calculate_optimal_queue_size(worker_count);
 
         Self {
             max_file_size: env::var("MAX_FILE_SIZE")
@@ -57,19 +107,12 @@ impl Config {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(95),
 
-            worker_count: env::var("WORKER_COUNT")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_else(|| {
-                    std::thread::available_parallelism()
-                        .map(|p| p.get())
-                        .unwrap_or(4)
-                }),
+            worker_count,
 
             queue_size: env::var("QUEUE_SIZE")
                 .ok()
                 .and_then(|v| v.parse().ok())
-                .unwrap_or(1000),
+                .unwrap_or(default_queue),
 
             server_port: env::var("SERVER_PORT")
                 .ok()

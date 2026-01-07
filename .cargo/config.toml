@@ -1,0 +1,15 @@
+# Cargo build configuration for optimal performance
+#
+# Enables native CPU optimizations for the build target.
+# This allows the compiler to use all CPU features available on the build machine.
+
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-cpu=native"]
+
+[target.'cfg(target_arch = "aarch64")']
+rustflags = ["-C", "target-cpu=native"]
+
+# Note: When building for deployment on different machines,
+# you may want to use a more portable target like:
+# rustflags = ["-C", "target-cpu=x86-64-v3"]  # For AVX2 support (most modern CPUs)
+# or remove this file entirely for maximum compatibility.

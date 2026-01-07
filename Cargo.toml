@@ -21,7 +21,7 @@ rayon = "1.10"
 # Utilities
 bytes = "1.6"
 thiserror = "2.0"
-tracing = "0.1"
+tracing = { version = "0.1", features = ["release_max_level_info"] }  # Strip debug logs in release
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -34,7 +34,7 @@ tokio-util = { version = "0.7", features = ["io"] }
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
 codegen-units = 1
 strip = true
 panic = "abort"

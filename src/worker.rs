@@ -48,13 +48,10 @@ impl WorkerPool {
                 let opts = options.clone();
                 let pool = rayon_pool.clone();
 
-                // Spawn a Tokio task to bridge async -> sync
-                tokio::task::spawn_blocking(move || {
-                    // Execute on the dedicated Rayon pool
-                    pool.install(|| {
-                        let result = convert(&job.input, job.quality, &opts);
-                        let _ = job.response_tx.send(result);
-                    });
+                // Directly spawn to Rayon pool - no spawn_blocking overhead
+                pool.spawn(move || {
+                    let result = convert(&job.input, job.quality, &opts);
+                    let _ = job.response_tx.send(result);
                 });
             }
         });
